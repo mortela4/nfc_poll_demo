@@ -2095,7 +2095,7 @@ static ReturnCode rfalNfcNfcDepActivate( rfalNfcDevice *device, rfalNfcDepCommMo
         }    
         
         initParam.BS        = RFAL_NFCDEP_Bx_NO_HIGH_BR;
-        initParam.BR        = RFAL_NFCDEP_Bx_NO_HIGH_BR;
+        initParam.BRATE     = RFAL_NFCDEP_Bx_NO_HIGH_BR;
         initParam.DID       = RFAL_NFCDEP_DID_NO;
         initParam.NAD       = RFAL_NFCDEP_NAD_NO;
         initParam.LR        = gNfcDev.disc.nfcDepLR;
