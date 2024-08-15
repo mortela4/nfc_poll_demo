@@ -11,6 +11,7 @@ extern "C" {
 #include "rfal_core/rfal_analogConfig.h"
 }
 
+
 // REFERENCE: https://www.st.com/resource/en/user_manual/um2890-rfnfc-abstraction-layer-rfal-stmicroelectronics.pdf
 // ISO 15693
 // ISO 1443(A)
@@ -93,21 +94,157 @@ static rfalNfcDiscoverParam discParam;      // NFC discovery parameters.
 bool multiSel = false;                      // Handling of multiple NFC-tags simultaneously.
 
 
+// Helpers:
+static char UID_hex_string[40] = {0};       // Safely hold up to NFCID3 values, i.e. 10-byte (requires 21-byte char-arr)
+
+static char *hex2str(uint8_t *number, uint8_t length)
+{
+	uint8_t aux_1 = 0;
+	uint8_t aux_2 = 0;
+
+	for (uint8_t i=0; i < length; i++)
+	{
+		aux_1 = number[i] / 16;
+		aux_2 = number[i] % 16;
+
+		if (aux_1 < 10)
+		{
+			UID_hex_string[2*i] = aux_1 + '0';
+		}
+		else
+        {
+			UID_hex_string[2*i] = aux_1 + ('A' - 10);
+		}
+
+		if (aux_2 < 10)
+        {
+			UID_hex_string[2*i+1] = aux_2 + '0';
+		}
+		else
+        {
+			UID_hex_string[2*i+1] = aux_2 + ('A' - 10);
+		}
+	} 
+
+	UID_hex_string[length*2] = '\0';
+
+    return((char *)UID_hex_string);
+}
+
+struct rfalStateToDescription
+{
+    rfalNfcState state;
+    String desc;
+};
+
+#define NUM_RFAL_NFC_STATES     16
+
+static const struct rfalStateToDescription stateToDesc[NUM_RFAL_NFC_STATES] = 
+{
+    {
+        .state = RFAL_NFC_STATE_NOTINIT,
+        .desc = "NOT_INITIALIZED",
+    },
+    {
+        .state = RFAL_NFC_STATE_IDLE,
+        .desc = "IDLE",
+    },
+    {
+        .state = RFAL_NFC_STATE_START_DISCOVERY,
+        .desc = "START_DISCOVERY",
+    },
+    {
+        .state = RFAL_NFC_STATE_WAKEUP_MODE,
+        .desc = "WKUP_MODE",
+    },
+    {
+        .state = RFAL_NFC_STATE_POLL_TECHDETECT,
+        .desc = "POLL_TECH_DETECT",
+    },
+    {
+        .state = RFAL_NFC_STATE_POLL_COLAVOIDANCE,
+        .desc = "POLL_COLL_AVOIDANCE",
+    },
+    {
+        .state = RFAL_NFC_STATE_POLL_SELECT,
+        .desc = "POLL_SELECT",
+    },
+    {
+        .state = RFAL_NFC_STATE_POLL_ACTIVATION,
+        .desc = "POLL_ACTIVATION",
+    },
+    {
+        .state = RFAL_NFC_STATE_LISTEN_TECHDETECT,
+        .desc = "LISTEN_TECH_DETECT",
+    },
+    {
+        .state = RFAL_NFC_STATE_LISTEN_COLAVOIDANCE,
+        .desc = "LISTEN_COLL_AVOIDANCE",
+    },
+    {
+        .state = RFAL_NFC_STATE_LISTEN_ACTIVATION,
+        .desc = "LISTEN_ACTIVATION",
+    },
+    {
+        .state = RFAL_NFC_STATE_LISTEN_SLEEP,
+        .desc = "LISTEN_SLEEP",
+    },
+    {
+        .state = RFAL_NFC_STATE_ACTIVATED,
+        .desc = "STATE_ACTIVATED",
+    },
+    {
+        .state = RFAL_NFC_STATE_DATAEXCHANGE,
+        .desc = "DATA_EXCHANGE_STARTED",
+    },
+    {
+        .state = RFAL_NFC_STATE_DATAEXCHANGE_DONE,
+        .desc = "DATA_EXCHANGE_DONE",
+    },
+    {
+        .state = RFAL_NFC_STATE_DEACTIVATION,
+        .desc = "DE-ACTIVATION",
+    },
+};
+
+static const String nonStateDesc = "<invalid state>";
+
+static String state_description(rfalNfcState rfalState)
+{
+    String stateDesc = nonStateDesc;
+
+    for (int i = 0; i < NUM_RFAL_NFC_STATES; i++)
+    {
+        struct rfalStateToDescription *entry = (struct rfalStateToDescription *)&stateToDesc[i];
+
+        if (rfalState == entry->state)
+        {
+            stateDesc = entry->desc;
+        }
+    }
+
+    return(stateDesc);
+}
+
+
 // RFAL notification callback.
 static void rfalNotifyCb( rfalNfcState st )
 {
     uint8_t       devCnt;
     rfalNfcDevice *dev;
     
+    Serial0.print("RFAL-notify: RFAL NFC-state changed! New state: ");
+    Serial0.println( state_description(rfalNfcGetState()) );
+
     if( st == RFAL_NFC_STATE_WAKEUP_MODE )
     {
-        Serial0.println("Wake Up mode started");
+        Serial0.println("Wake Up mode started ...");
     }
     else if( st == RFAL_NFC_STATE_POLL_TECHDETECT )
     {
         if( discParam.wakeupEnabled )
         {
-            Serial0.println("Wake Up mode terminated. Polling for devices");
+            Serial0.println("Wake Up mode terminated. Polling for devices ...");
         }
     }
     else if( st == RFAL_NFC_STATE_POLL_SELECT )
@@ -126,7 +263,7 @@ static void rfalNotifyCb( rfalNfcState st )
         else
         {
             rfalNfcDeactivate( RFAL_NFC_DEACTIVATE_DISCOVERY );
-            Serial0.println("RFAL-callback: de-activating NFC again ...");
+            Serial0.println("RFAL-notify: de-activating NFC again ...");
         }
     }
     else if( st == RFAL_NFC_STATE_START_DISCOVERY )
@@ -145,7 +282,7 @@ void setup()
     spi_init();
 
     // NFC:
-    ReturnCode ret = rfalInitialize();
+    ReturnCode ret = rfalNfcInitialize();      // WAS: 'rfalInitialize()' - but this function is NOT setting NFC-state!!
     
     if (RFAL_ERR_NONE != ret)
     {
@@ -172,7 +309,7 @@ void setup()
     discParam.p2pNfcaPrio   = true;
 
     discParam.notifyCb             = rfalNotifyCb;
-    discParam.totalDuration        = 1000U;
+    discParam.totalDuration        = 3000U;                         /* Duration of POLL + LISTEN cycle = 1000ms = 1sec. */
     discParam.techs2Find           = RFAL_NFC_TECH_NONE;          /* For the // check, enable the NFC Technologies based on RFAL Feature switches */
 
 
@@ -249,6 +386,11 @@ void setup()
         }
 
         Serial0.println("Setup of discovery parameters for NFC-scan OK ...");
+        Serial0.print("NFC state BEFORE: ");
+        Serial0.println( state_description(rfalNfcGetState()) );
+        rfalNfcDeactivate(RFAL_NFC_DEACTIVATE_DISCOVERY);
+        Serial0.print("NFC state AFTER: ");
+        Serial0.println( state_description(rfalNfcGetState()) );
 }
 
 
@@ -259,10 +401,12 @@ void loop()
     Serial0.println("Worker - start scan ...");
 
     // put your main code here, to run repeatedly:
-    rfalWorker(); //TODO: put in a separate thread
+    rfalNfcWorker(); //TODO: put in a separate thread. NOTE: was 'rfalWorker()'.
 
     if( rfalNfcIsDevActivated( rfalNfcGetState() ) )
     {
+        Serial0.println("ST25R3911B NFC-xcvr active - polling ...");
+
         rfalNfcGetActiveDevice( &nfcDevice );
         
         switch( nfcDevice->type )
@@ -274,35 +418,40 @@ void loop()
                 switch( nfcDevice->dev.nfca.type )
                 {
                     case RFAL_NFCA_T1T:
-                        platformLog("ISO14443A/Topaz (NFC-A T1T) TAG found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        //platformLog("ISO14443A/Topaz (NFC-A T1T) TAG found. UID: %s\r\n", hex2str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        Serial0.print("ISO14443A/Topaz (NFC-A T1T) TAG found. UID:");
                         break;
                     
                     case RFAL_NFCA_T4T:
-                        platformLog("NFCA Passive ISO-DEP device found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        Serial0.print("NFCA Passive ISO-DEP device found. UID: ");
                     
                         // checkAPDU();
                         break;
                     
                     case RFAL_NFCA_T4T_NFCDEP:
                     case RFAL_NFCA_NFCDEP:
-                        platformLog("NFCA Passive P2P device found. NFCID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        Serial0.print("NFCA Passive P2P device found. NFCID: ");
                         
                         // checkP2P( nfcDevice );
                         break;
                         
                     default:
-                        platformLog("ISO14443A/NFC-A card found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        Serial0.print("ISO14443A/NFC-A card found. UID: ");
                         
                         // checkT2t();
                         break;
                 }
+
+                Serial0.println(hex2str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                        
                 break;
             
             /*******************************************************************************/
             case RFAL_NFC_LISTEN_TYPE_NFCB:
                 
                 platformLedOn(PLATFORM_LED_B_PORT, PLATFORM_LED_B_PIN);
-                platformLog("ISO14443B/NFC-B card found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                Serial0.print("ISO14443B/NFC-B card found. UID: ");
+                Serial0.println( hex2str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
             
                 if( rfalNfcbIsIsoDepSupported( &nfcDevice->dev.nfcb ) )
                 {
@@ -316,15 +465,17 @@ void loop()
                 platformLedOn(PLATFORM_LED_F_PORT, PLATFORM_LED_F_PIN);
                 if( rfalNfcfIsNfcDepSupported( &nfcDevice->dev.nfcf ) )
                 {
-                    platformLog("NFCF Passive P2P device found. NFCID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
+                    Serial0.print("NFCF Passive P2P device found. NFCID: ");
                     // checkP2P( nfcDevice );
                 }
                 else
                 {
-                    platformLog("Felica/NFC-F card found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ));
+                    Serial0.print("Felica/NFC-F card found. UID: ");
                     
                     // checkNfcf( &nfcDevice->dev.nfcf );
                 }
+
+                Serial0.println( hex2str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
                 
                 break;
             
@@ -337,9 +488,10 @@ void loop()
                     
                     SMEMCPY( devUID, nfcDevice->nfcid, nfcDevice->nfcidLen );   /* Copy the UID into local var */
                     REVERSE_BYTES( devUID, RFAL_NFCV_UID_LEN );                 /* Reverse the UID for display purposes */
-                    platformLog("ISO15693/NFC-V card found. UID: %s\r\n", hex2Str(devUID, RFAL_NFCV_UID_LEN));
+                    Serial0.print("ISO15693/NFC-V card found. UID: ");
+                    Serial0.println( hex2str(devUID, RFAL_NFCV_UID_LEN) );      /* NOTE: previous standards had 7-byte(=56-bit) UID, while NFC-V is 8-byte(=64-bit)!! */
                     
-                    // checkNfcv( &nfcDevice->dev.nfcv );
+                    //checkNfcv( &nfcDevice->dev.nfcv );
                 }
                 break;
                 
@@ -347,7 +499,8 @@ void loop()
             case RFAL_NFC_LISTEN_TYPE_ST25TB:
                 
                 platformLedOn(PLATFORM_LED_B_PORT, PLATFORM_LED_B_PIN);
-                platformLog("ST25TB card found. UID: %s\r\n", hex2Str( nfcDevice->nfcid, nfcDevice->nfcidLen ));
+                Serial0.print("ST25TB card found. UID: ");
+                Serial0.println( hex2str( nfcDevice->nfcid, nfcDevice->nfcidLen ) );
                 break;
             
             /*******************************************************************************/
@@ -355,7 +508,8 @@ void loop()
             case RFAL_NFC_POLL_TYPE_AP2P:
                 
                 platformLedOn(PLATFORM_LED_AP2P_PORT, PLATFORM_LED_AP2P_PIN);
-                platformLog("NFC Active P2P device found. NFCID3: %s\r\n", hex2Str(nfcDevice->nfcid, nfcDevice->nfcidLen));
+                Serial0.print("NFC Active P2P device found. NFCID3: ");
+                Serial0.println( hex2str(nfcDevice->nfcid, nfcDevice->nfcidLen) );
             
                 // checkP2P( nfcDevice );
                 break;
@@ -366,10 +520,13 @@ void loop()
                 
                 platformLedOn( ((nfcDevice->type == RFAL_NFC_POLL_TYPE_NFCA) ? PLATFORM_LED_A_PORT : PLATFORM_LED_F_PORT), 
                                 ((nfcDevice->type == RFAL_NFC_POLL_TYPE_NFCA) ? PLATFORM_LED_A_PIN  : PLATFORM_LED_F_PIN)  );
-                platformLog("Activated in CE %s mode.\r\n", (nfcDevice->type == RFAL_NFC_POLL_TYPE_NFCA) ? "NFC-A" : "NFC-F");
+                Serial0.print("Activated in CE ");
+                Serial0.print( (nfcDevice->type == RFAL_NFC_POLL_TYPE_NFCA) ? "NFC-A" : "NFC-F" );
+                Serial0.println(" mode."); 
 
                 if( nfcDevice->rfInterface == RFAL_NFC_INTERFACE_NFCDEP )
                 {
+                    Serial0.println("Interface = NFCDEP (P2P-capable) ..."); 
                     // checkP2P( nfcDevice );
                 }
                 else
@@ -380,11 +537,20 @@ void loop()
             
             /*******************************************************************************/
             default:
+                Serial0.println("WARN: unrecognized NFC device!(??)");
                 break;
         }
         
-        rfalNfcDeactivate( RFAL_NFC_DEACTIVATE_DISCOVERY );   // TODO: assess - is 'rfalNfcDeactivate()' required to be run after a scan??? (then re-activate w. ''rfalNfcDeactivate()' ??)
+         //rfalNfcDeactivate(RFAL_NFC_DEACTIVATE_IDLE);
+        rfalNfcDeactivate( RFAL_NFC_DEACTIVATE_DISCOVERY );
     }
+    else
+    {
+        Serial0.println("INFO: ST25R3911B NFC-xcvr deactivated ...");
+    }
+
+    //rfalNfcDeactivate( RFAL_NFC_DEACTIVATE_DISCOVERY );   // TODO: assess - is 'rfalNfcDeactivate()' required to be run after a scan??? (then re-activate w. ''rfalNfcDeactivate()' ??)
+
 
     vTaskDelay(2000);
 }

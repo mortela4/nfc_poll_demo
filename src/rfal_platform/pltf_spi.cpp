@@ -16,7 +16,7 @@
  * DEFINES
  ******************************************************************************
  */
-const long spi_speed = 500000;
+const long spi_speed = 1000000;
 
 /*
  ******************************************************************************
@@ -35,6 +35,7 @@ void spi_init(void)
 {
     rfal_spi_mtx = xSemaphoreCreateMutex();
     SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+    SPI.setFrequency(spi_speed);
     pinMode(SPI_SS, OUTPUT);
 }
 

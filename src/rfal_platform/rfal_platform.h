@@ -95,7 +95,6 @@ extern "C" {
 #define RFAL_FEATURE_ISO_DEP                    true                   /*!< Enable/Disable RFAL support for ISO-DEP (ISO14443-4)                      */
 #define RFAL_FEATURE_NFC_DEP                    true                   /*!< Enable/Disable RFAL support for NFC-DEP (NFCIP1/P2P)                     */
 
-
 #define RFAL_FEATURE_ISO_DEP_IBLOCK_MAX_LEN     256                     /*!< ISO-DEP I-Block max length. Please use values as defined by rfalIsoDepFSx */
 #define RFAL_FEATURE_ISO_DEP_APDU_MAX_LEN       1024                    /*!< ISO-DEP APDU max length. Please use multiples of I-Block max length       */
 #define RFAL_FEATURE_NFC_RF_BUF_LEN             258U                    /*!< RF buffer length used by RFAL NFC layer                                   */
