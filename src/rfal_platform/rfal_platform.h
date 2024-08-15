@@ -89,6 +89,9 @@ extern "C" {
 #define RFAL_FEATURE_NFCF                       true                   /*!< Enable/Disable RFAL support for NFC-F (FeliCa)                            */
 #define RFAL_FEATURE_NFCV                       true                    /*!< Enable/Disable RFAL support for NFC-V (ISO15693)                          */
 #define RFAL_FEATURE_T1T                        true                   /*!< Enable/Disable RFAL support for T1T (Topaz)                               */
+#define RFAL_FEATURE_T2T                        true                    /*!< Enable/Disable RFAL support for T2T                                */
+#define RFAL_FEATURE_T4T                        true                    /*!< Enable/Disable RFAL support for T4T                               */
+
 #define RFAL_FEATURE_ST25TB                     false                   /*!< Enable/Disable RFAL support for ST25TB                                    */
 #define RFAL_FEATURE_DYNAMIC_ANALOG_CONFIG      true                    /*!< Enable/Disable Analog Configs to be dynamically updated (RAM)             */
 #define RFAL_FEATURE_DYNAMIC_POWER              false                   /*!< Enable/Disable RFAL dynamic power support                                 */
