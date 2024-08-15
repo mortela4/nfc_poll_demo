@@ -227,6 +227,58 @@ static String state_description(rfalNfcState rfalState)
 }
 
 
+static void demoNfcv( rfalNfcvListenDevice *nfcvDev )
+{
+#if RFAL_FEATURE_NFCV
+    
+    ReturnCode            err;
+    uint16_t              rcvLen;
+    uint8_t               blockNum = 1;
+    uint8_t               rxBuf[ 1 + DEMO_NFCV_BLOCK_LEN + RFAL_CRC_LEN ];                        /* Flags + Block Data + CRC */
+    uint8_t               *uid; 
+    uint8_t               reqFlag;
+#if DEMO_NFCV_WRITE_TAG
+    uint8_t               wrData[DEMO_NFCV_BLOCK_LEN] = { 0x11, 0x22, 0x33, 0x99 };             /* Write block example */
+#endif /* DEMO_NFCV_WRITE_TAG */
+              
+
+    uid     = nfcvDev->InvRes.UID;
+    reqFlag = RFAL_NFCV_REQ_FLAG_DEFAULT;
+    
+    #if DEMO_NFCV_USE_SELECT_MODE
+        /*
+        * Activate selected state
+        */
+        err = rfalNfcvPollerSelect( reqFlag, nfcvDev->InvRes.UID );
+        platformLog(" Select %s \r\n", (err != RFAL_ERR_NONE) ? "FAIL (revert to addressed mode)": "OK" );
+        if( err == RFAL_ERR_NONE )
+        {
+            reqFlag = (RFAL_NFCV_REQ_FLAG_DEFAULT | RFAL_NFCV_REQ_FLAG_SELECT);
+            uid     = NULL;
+        }
+    #endif /* DEMO_NFCV_USE_SELECT_MODE */
+
+    /*
+    * Read block using Read Single Block command
+    * with addressed mode (uid != NULL) or selected mode (uid == NULL)
+    */
+    err = rfalNfcvPollerReadSingleBlock(reqFlag, uid, blockNum, rxBuf, sizeof(rxBuf), &rcvLen);
+    Serial0.println(" Read Block:");
+    Serial0.println( (err != RFAL_ERR_NONE) ? "FAIL": "OK Data:");
+    Serial0.println( (err != RFAL_ERR_NONE) ? "" : hex2str( &rxBuf[1], DEMO_NFCV_BLOCK_LEN));
+ 
+    #if DEMO_NFCV_WRITE_TAG /* Writing example */
+        err = rfalNfcvPollerWriteSingleBlock(reqFlag, uid, blockNum, wrData, sizeof(wrData));
+        platformLog(" Write Block: %s Data: %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK", hex2Str( wrData, DEMO_NFCV_BLOCK_LEN) );
+        err = rfalNfcvPollerReadSingleBlock(reqFlag, uid, blockNum, rxBuf, sizeof(rxBuf), &rcvLen);
+        platformLog(" Read Block: %s %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK Data:", (err != RFAL_ERR_NONE) ? "" : hex2Str( &rxBuf[1], DEMO_NFCV_BLOCK_LEN));
+    #endif /* DEMO_NFCV_WRITE_TAG */
+        
+#endif /* RFAL_FEATURE_NFCV */
+}
+
+
+
 // RFAL notification callback.
 static void rfalNotifyCb( rfalNfcState st )
 {
@@ -492,6 +544,7 @@ void loop()
                     Serial0.println( hex2str(devUID, RFAL_NFCV_UID_LEN) );      /* NOTE: previous standards had 7-byte(=56-bit) UID, while NFC-V is 8-byte(=64-bit)!! */
                     
                     //checkNfcv( &nfcDevice->dev.nfcv );
+                    demoNfcv( &nfcDevice->dev.nfcv );
                 }
                 break;
                 
@@ -552,5 +605,7 @@ void loop()
     //rfalNfcDeactivate( RFAL_NFC_DEACTIVATE_DISCOVERY );   // TODO: assess - is 'rfalNfcDeactivate()' required to be run after a scan??? (then re-activate w. ''rfalNfcDeactivate()' ??)
 
 
-    vTaskDelay(2000);
+    vTaskDelay(5000);
 }
+
+
