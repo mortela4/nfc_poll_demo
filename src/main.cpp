@@ -365,7 +365,7 @@ static void demoNfcv( rfalNfcvListenDevice *nfcvDev )
         * Activate selected state
         */
         err = rfalNfcvPollerSelect( reqFlag, nfcvDev->InvRes.UID );
-        platformLog(" Select %s \r\n", (err != RFAL_ERR_NONE) ? "FAIL (revert to addressed mode)": "OK" );
+        Serial0.print(" Select %s \r\n", (err != RFAL_ERR_NONE) ? "FAIL (revert to addressed mode)": "OK" );
         if( err == RFAL_ERR_NONE )
         {
             reqFlag = (RFAL_NFCV_REQ_FLAG_DEFAULT | RFAL_NFCV_REQ_FLAG_SELECT);
@@ -384,9 +384,9 @@ static void demoNfcv( rfalNfcvListenDevice *nfcvDev )
  
     #if DEMO_NFCV_WRITE_TAG /* Writing example */
         err = rfalNfcvPollerWriteSingleBlock(reqFlag, uid, blockNum, wrData, sizeof(wrData));
-        platformLog(" Write Block: %s Data: %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK", hex2Str( wrData, DEMO_NFCV_BLOCK_LEN) );
+        Serial0.print(" Write Block: %s Data: %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK", hex2Str( wrData, DEMO_NFCV_BLOCK_LEN) );
         err = rfalNfcvPollerReadSingleBlock(reqFlag, uid, blockNum, rxBuf, sizeof(rxBuf), &rcvLen);
-        platformLog(" Read Block: %s %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK Data:", (err != RFAL_ERR_NONE) ? "" : hex2Str( &rxBuf[1], DEMO_NFCV_BLOCK_LEN));
+        Serial0.print(" Read Block: %s %s\r\n", (err != RFAL_ERR_NONE) ? "FAIL": "OK Data:", (err != RFAL_ERR_NONE) ? "" : hex2Str( &rxBuf[1], DEMO_NFCV_BLOCK_LEN));
     #endif /* DEMO_NFCV_WRITE_TAG */
         
 #endif /* RFAL_FEATURE_NFCV */
@@ -990,7 +990,7 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
                 case RFAL_NFCA_T1T:
                     
                     /* No further activation needed for a T1T (RID already performed)*/
-                    platformLog("NFC-A T1T device activated \r\n");                   /* NFC-A T1T device activated */
+                    Serial0.print("NFC-A T1T device activated \r\n");                   /* NFC-A T1T device activated */
                     
                     gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_RF;
                     break;
@@ -1000,7 +1000,7 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
                 case RFAL_NFCA_T2T:
                   
                     /* No specific activation needed for a T2T */    
-                    platformLog("NFC-A T2T device activated \r\n");                   /* NFC-A T2T device activated */
+                    Serial0.print("NFC-A T2T device activated \r\n");                   /* NFC-A T2T device activated */
                     
                     gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_RF;
                     break;
@@ -1016,7 +1016,7 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
                         return false;
                     }
                     
-                    platformLog("NFC-A T4T (ISO-DEP) device activated \r\n");         /* NFC-A T4T device activated */
+                    Serial0.print("NFC-A T4T (ISO-DEP) device activated \r\n");         /* NFC-A T4T device activated */
                     
                     gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_ISODEP;
                     break;
@@ -1032,7 +1032,7 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
                       return false;
                     }
                     
-                    platformLog("NFC-A P2P (NFC-DEP) device activated \r\n");         /* NFC-A P2P device activated */
+                    Serial0.print("NFC-A P2P (NFC-DEP) device activated \r\n");         /* NFC-A P2P device activated */
                     gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_NFCDEP;
                     break;
             }
@@ -1057,13 +1057,13 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
             err = rfalIsoDepPollBHandleActivation( (rfalIsoDepFSxI)RFAL_ISODEP_FSDI_DEFAULT, RFAL_ISODEP_NO_DID, RFAL_BR_424, 0x00, &gDevList[devIt].dev.nfcb, NULL, 0, &gDevList[devIt].proto.isoDep );
             if( err == RFAL_ERR_NONE )
             {
-                platformLog("NFC-B T4T (ISO-DEP) device activated \r\n");             /* NFC-B T4T device activated */
+                Serial0.print("NFC-B T4T (ISO-DEP) device activated \r\n");             /* NFC-B T4T device activated */
                 
                 gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_ISODEP ;
                 break;
             }
             
-            platformLog("NFC-B device activated \r\n");                               /* NFC-B  device activated */
+            Serial0.print("NFC-B device activated \r\n");                               /* NFC-B  device activated */
             gDevList[devIt].rfInterface =  EXAMPLE_RFAL_POLLER_INTERFACE_RF;
             break;
             
@@ -1081,13 +1081,13 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
                     return false;
                 }
                 
-                platformLog("NFC-F P2P (NFC-DEP) device activated \r\n");             /* NFC-A P2P device activated */
+                Serial0.print("NFC-F P2P (NFC-DEP) device activated \r\n");             /* NFC-A P2P device activated */
                 
                 gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_NFCDEP;
                 break;
             }
             
-            platformLog("NFC-F T3T device activated \r\n");                           /* NFC-F T3T device activated */
+            Serial0.print("NFC-F T3T device activated \r\n");                           /* NFC-F T3T device activated */
             gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_RF;
             break;
             
@@ -1099,7 +1099,7 @@ static bool exampleRfalPollerActivation( uint8_t devIt )
             rfalNfcvPollerInitialize();
             
             /* No specific activation needed for a T5T */
-            platformLog("NFC-V T5T device activated \r\n");                           /* NFC-V T5T device activated */
+            Serial0.print("NFC-V T5T device activated \r\n");                           /* NFC-V T5T device activated */
             
             gDevList[devIt].rfInterface = EXAMPLE_RFAL_POLLER_INTERFACE_RF;
             break;
@@ -1367,7 +1367,7 @@ static bool exampleRfalPollerDeactivate( void )
             default:
                 return false;
         }
-        platformLog("Device deactivated \r\n");
+        Serial0.print("Device deactivated \r\n");
     }
     
     return true;
@@ -1446,32 +1446,37 @@ void loop()
                 break;
             }
             
-            platformLog("Device(s) found: %d \r\n", gDevCnt);
+            Serial0.print("Device(s) found: ");
+            Serial0.println( gDevCnt );
             
             for(int i = 0; i < gDevCnt; i++)
             {
                 switch( gDevList[i].type )
                 {
                     case EXAMPLE_RFAL_POLLER_TYPE_NFCA:
-                        platformLog( " NFC-A device UID: %s \r\n", hex2str(gDevList[i].dev.nfca.nfcId1, gDevList[i].dev.nfca.nfcId1Len) );
+                        Serial0.print( " NFC-A device UID: "); 
+                        Serial0.println( hex2str(gDevList[i].dev.nfca.nfcId1, gDevList[i].dev.nfca.nfcId1Len) );
                         //platformLedOn( LED_NFCA_PORT, LED_NFCA_PIN  );
                         platformLedOn(LED_TAG_READ_PORT, LED_TAG_READ_PIN); 
                         break;
                         
                     case EXAMPLE_RFAL_POLLER_TYPE_NFCB:
-                        platformLog( " NFC-B device UID: %s \r\n", hex2str(gDevList[i].dev.nfcb.sensbRes.nfcid0, RFAL_NFCB_NFCID0_LEN) );
+                        Serial0.print( " NFC-B device UID: "); 
+                        Serial0.println( hex2str(gDevList[i].dev.nfcb.sensbRes.nfcid0, RFAL_NFCB_NFCID0_LEN) );
                         //platformLedOn( LED_NFCB_PORT, LED_NFCB_PIN  );
                         platformLedOn(LED_TAG_READ_PORT, LED_TAG_READ_PIN); 
                         break;
                         
                     case EXAMPLE_RFAL_POLLER_TYPE_NFCF:
-                        platformLog( " NFC-F device UID: %s \r\n", hex2str(gDevList[i].dev.nfcf.sensfRes.NFCID2, RFAL_NFCF_NFCID2_LEN) );
+                        Serial0.print( " NFC-F device UID: "); 
+                        Serial0.println( hex2str(gDevList[i].dev.nfcf.sensfRes.NFCID2, RFAL_NFCF_NFCID2_LEN) );
                         //platformLedOn( LED_NFCF_PORT, LED_NFCF_PIN  );
                         platformLedOn(LED_TAG_READ_PORT, LED_TAG_READ_PIN); 
                         break;
                         
                     case EXAMPLE_RFAL_POLLER_TYPE_NFCV:
-                        platformLog( " NFC-V device UID: %s \r\n", hex2str(gDevList[i].dev.nfcv.InvRes.UID, RFAL_NFCV_UID_LEN) );
+                        Serial0.print( " NFC-V device UID: "); 
+                        Serial0.println( hex2str(gDevList[i].dev.nfcv.InvRes.UID, RFAL_NFCV_UID_LEN) );
                         //platformLedOn( LED_NFCV_PORT, LED_NFCV_PIN  );
                         platformLedOn(LED_TAG_READ_PORT, LED_TAG_READ_PIN); 
                         break;
@@ -1514,7 +1519,7 @@ void loop()
                 break;
                 
             default:                                                          /* Data exchange not successful, card removed or other transmission error */
-                platformLog("Data exchange terminated with error: %d \r\n", err);
+                Serial0.print("Data exchange terminated with error: %d \r\n", err);
                 gState = EXAMPLE_RFAL_POLLER_STATE_DEACTIVATION;              /* Restart loop */
                 break;
         }
@@ -1542,7 +1547,7 @@ void loop()
 
 	}
 
-    vTaskDelay(5000);
+    vTaskDelay(3000);
 }
 
 
