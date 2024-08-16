@@ -1087,7 +1087,7 @@ void loop()
             gActiveDev  = NULL;
             gDevCnt     = 0;
             
-            gState = EXAMPLE_RFAL_POLLER_STATE_TECHDETECT;
+            gState = EXAMPLE_RFAL_POLLER_STATE_TECHDETECT;	// Transit to POLLER-state = 'Technology Detect'.
             break;
             
             
@@ -1156,7 +1156,8 @@ void loop()
             
         /*******************************************************************************/
         case EXAMPLE_RFAL_POLLER_STATE_ACTIVATION:
-#if 0
+#if defined(USE_POLLER_STATE_REACTIVATION) && (USE_POLLER_STATE_REACTIVATION == 1)
+
             if( !exampleRfalPollerActivation( 0 ) )                               /* Any device previous identified can be Activated, on this example will select the firt on the list */
             {
                 gState = EXAMPLE_RFAL_POLLER_STATE_DEACTIVATION;                  /* If Activation failed, restart loop */
@@ -1169,7 +1170,7 @@ void loop()
 #endif	            
             
         /*******************************************************************************/
-#if 0	        
+#if defined(USE_POLLER_STATE_DATAEXCHANGE) && (USE_POLLER_STATE_DATAEXCHANGE == 1)
     case EXAMPLE_RFAL_POLLER_STATE_DATAEXCHANGE_START:                       
     case EXAMPLE_RFAL_POLLER_STATE_DATAEXCHANGE_CHECK:
             
@@ -1195,16 +1196,13 @@ void loop()
 #endif	            
         /*******************************************************************************/
         case EXAMPLE_RFAL_POLLER_STATE_DEACTIVATION:
-#if 0	            
+#if defined(USE_POLLER_DEACTIVATION) && (USE_POLLER_DEACTIVATION == 1)
             exampleRfalPollerDeactivate();                                        /* If a card has been activated, properly deactivate the device */
 #endif	            
             rfalFieldOff();                                                       /* Turn the Field Off powering down any device nearby */
-            platformDelay(2);                                                     /* Remain a certain period with field off */
+            platformDelay(20);                                                     /* Remain a certain period with field off */
             gState = EXAMPLE_RFAL_POLLER_STATE_INIT;                              /* Restart the loop */
-
-            //platformLogClear();
-            //platformLog2Screen(logBuffer);
-
+            //
             break;
         
         
@@ -1214,7 +1212,7 @@ void loop()
 
 	}
 
-    vTaskDelay(3000);
+    vTaskDelay(3000);    // Run this task every 3seconds - task should NOT use more than 3sec to complete!!
 }
 
 
